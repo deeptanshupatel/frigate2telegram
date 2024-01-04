@@ -1,0 +1,11 @@
+mqtt:
+  host: 192.168.1.203 # mqtt host/server
+  port: 1883 # mqtt host/server port
+
+telegram:
+  chat_id: <your_chat_id> # your telegram chat id
+  api_token: <your_bot_api_token> # your telegram bot api token
+
+frigate:
+  host: 192.168.1.4 # frigate host/server
+  port: 5001 # frigate host/server port
