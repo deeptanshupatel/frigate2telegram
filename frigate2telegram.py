@@ -9,51 +9,69 @@ import logging
 # own classes
 from telegram_helper import telegram_helper
 
-logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', filename = "frigate2telegram.log", level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 class frigate2telegram:
 
-    def on_connect(self, client, userdata, flags, rc):
-        logger.info("Connected to mqtt server result code: " + str(rc))    
-        client.subscribe("frigate/events")
+    def __init__(self):
+        logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', filename = "frigate2telegram.log", level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
-    def on_message(self, client, userdata, msg):
-        json_data = json.loads(msg.payload)
-        logger.info(f"cam: {json_data['after']['camera']}, type: {json_data['type']}, label: {json_data['after']['label']}")
-        camera_name = json_data['after']['camera']
-        self.telegram_helper.sendPhoto(photo_url = self.getPhotoUrl(camera_name))
+    def onMqttConnect(self, client, userdata, flags, rc):
+        try:
+            self.logger.info("Connected to mqtt server result code: " + str(rc))    
+            client.subscribe("frigate/events")
+        except Exception as ex:
+            self.logger.error(f"Exception onMqttConnect: {ex}")
 
-    def getPhotoUrl(self, camera_name):
-        photo_url = f'http://{self.config["frigate"]["host"]}:{self.config["frigate"]["port"]}/api/{camera_name}/latest.jpg?bbox=1&quality=100'
-        return photo_url
-    
-    def getVideoUrl(self, camera_name):
-        video_url = f'http://{self.config["frigate"]["host"]}:{self.config["frigate"]["port"]}/api/{camera_name}/latest.jpg?bbox=1&quality=100'
-        return video_url
+    def onMqttMessage(self, client, userdata, msg):
+        try:
+            json_data = json.loads(msg.payload)
+            event_type = json_data['type']
+            event_id = json_data['after']['id']
+            camera_name = json_data['after']['camera']
+            motion_object = json_data['after']['label']
+            self.logger.info(f"camera name: {camera_name}, event type: {event_type}, event id: {event_id}, motion object: {motion_object}")
+            frigate_url = self.getFrigateUrl(event_type, event_id)
+            if event_type == "new":
+                self.telegram_helper.sendPhoto(frigate_url)
+            elif event_type == "end":
+                self.telegram_helper.sendVideo(frigate_url)
+        except Exception as ex:
+            self.logger.error(f"Exception onMqttMessage: {ex}")
+
+    def getFrigateUrl(self, event_type, event_id):
+        try:
+            url = None
+            if event_type == "new":
+                url = f'http://{self.config["frigate"]["host"]}:{self.config["frigate"]["port"]}/api/events/{event_id}/snapshot.jpg?bbox=1&quality=100&timestamp=1'
+            elif event_type == "end":
+                url = f'http://{self.config["frigate"]["host"]}:{self.config["frigate"]["port"]}/api/events/{event_id}/clip.mp4'
+            return url
+        except Exception as ex:
+            self.logger.error(f"Exception getFrigateUrl: {ex}")
 
     def loadConfig(self):
-        config = {}
-        with open("config.yaml", "r") as stream:
-            try:
-                config = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                logger.error(exc)
-        return config
-    
+        try:
+            self.config = {}
+            with open("config.yaml", "r") as stream:
+                self.config = yaml.safe_load(stream)
+        except Exception as ex:
+            self.logger.error(f"Config load failed, exception: {ex}")
+        
     def main(self):
-        self.config = self.loadConfig()
-        self.telegram_helper = telegram_helper()
-        self.telegram_helper.init(self.config, logger)
+        try:
+            self.loadConfig()
+            self.telegram_helper = telegram_helper(self.config, self.logger)
 
-        self.client = mqtt.Client()
-        self.client.on_connect = self.on_connect
-        self.client.on_message = self.on_message
+            self.client = mqtt.Client()
+            self.client.on_connect = self.onMqttConnect
+            self.client.on_message = self.onMqttMessage
 
-        self.client.connect(self.config["mqtt"]["host"], self.config["mqtt"]["port"])
+            self.client.connect(self.config["mqtt"]["host"], self.config["mqtt"]["port"])
 
-        self.client.loop_forever()
-
+            self.client.loop_forever()
+        except Exception as ex:
+            self.logger.error(f"Exception main: {ex}")
+        
 if __name__ == "__main__":
     obj = frigate2telegram()
     obj.main()
