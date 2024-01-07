@@ -5,6 +5,7 @@ import yaml # pip install pyyaml
 # standard imports
 import json
 import logging
+import urllib.request
 
 # own classes
 from telegram_helper import telegram_helper
@@ -31,10 +32,14 @@ class frigate2telegram:
             motion_object = json_data['after']['label']
             self.logger.info(f"camera name: {camera_name}, event type: {event_type}, event id: {event_id}, motion object: {motion_object}")
             frigate_url = self.getFrigateUrl(event_type, event_id)
-            if event_type == "new":
-                self.telegram_helper.sendPhoto(frigate_url)
-            elif event_type == "end":
-                self.telegram_helper.sendVideo(frigate_url)
+            if frigate_url != None:
+                status, data = self.readFrigateData(frigate_url)
+                if event_type == "new":
+                    caption = f"There is a {motion_object} at {camera_name} camera"
+                    self.telegram_helper.sendPhoto(status, caption, data)
+                elif event_type == "end":
+                    caption = f"Video of {motion_object} at {camera_name} camera"
+                    self.telegram_helper.sendVideo(status, caption, data)
         except Exception as ex:
             self.logger.error(f"Exception onMqttMessage: {ex}")
 
@@ -48,6 +53,18 @@ class frigate2telegram:
             return url
         except Exception as ex:
             self.logger.error(f"Exception getFrigateUrl: {ex}")
+
+    def readFrigateData(self, url):
+        data = ""
+        status = 200
+        try:
+            with urllib.request.urlopen(url) as f:
+                data = f.read()
+        except Exception as ex:
+            status = ex.code
+            data = ex.read()
+            self.logger.error(f"Exception readFrigateData: {ex}")
+        return status, data
 
     def loadConfig(self):
         try:
