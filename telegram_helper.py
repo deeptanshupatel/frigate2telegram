@@ -9,6 +9,7 @@ class telegram_helper:
             self.bot_token = self.config['telegram']['api_token']
             self.bot_chat_id = self.config['telegram']['chat_id']
             self.base_url = "https://api.telegram.org/bot" + self.bot_token
+            self.sendMessage("frigate2telegram got started!")
         except Exception as ex:
             self.logger.error(f"Exception __init__: {ex}")
 
@@ -54,4 +55,3 @@ class telegram_helper:
         except Exception as ex:
             self.logger.error(f"Exception sendVideo: {ex}")
 
-    

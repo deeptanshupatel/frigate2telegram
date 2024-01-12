@@ -13,7 +13,7 @@ from telegram_helper import telegram_helper
 class frigate2telegram:
 
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', filename = "frigate2telegram.log", level=logging.INFO)
+        logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', filename = "/logs/frigate2telegram.log", level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
     def onMqttConnect(self, client, userdata, flags, rc):
@@ -69,16 +69,28 @@ class frigate2telegram:
     def loadConfig(self):
         try:
             self.config = {}
-            with open("config.yaml", "r") as stream:
+            status = True
+            with open("/config/config.yaml", "r") as stream:
                 self.config = yaml.safe_load(stream)
+                if self.config["mqtt"]["host"].startswith("_REPLACE_"):
+                    self.logger.error(f"Invalid MQTT host, no messages will be send out")
+                    status = False
+                if self.config["frigate"]["host"].startswith("_REPLACE_"):
+                    self.logger.error(f"Invalid Frigate host, no messages will be send out")
+                    status = False
+                if self.config['telegram']['api_token'].startswith("_REPLACE_") or str(self.config['telegram']['chat_id']).startswith("_REPLACE_"):
+                    self.logger.error(f"Invalid telegram token or chat id, no messages will be send out")
+                    status = False
+            return status
         except Exception as ex:
             self.logger.error(f"Config load failed, exception: {ex}")
         
     def main(self):
         try:
-            self.loadConfig()
-            self.telegram_helper = telegram_helper(self.config, self.logger)
+            if self.loadConfig() == False:
+                return
 
+            self.telegram_helper = telegram_helper(self.config, self.logger)
             self.client = mqtt.Client()
             self.client.on_connect = self.onMqttConnect
             self.client.on_message = self.onMqttMessage
