@@ -1,11 +1,13 @@
-# Notes: Run this docker compose file 
-#   sudo docker compose up -d
+# Notes: Run this docker compose file if you want to build image yourself
+#   sudo docker compose up -d --build --force-recreate
 
 version: '3.9'
 
 services:
   frigate2telegram:
-    image: ghcr.io/deeptanshupatel/frigate2telegram
+    build:
+      context: .
+    image: frigate2telegram
     container_name: frigate2telegram
     volumes:
       - ./:/config
