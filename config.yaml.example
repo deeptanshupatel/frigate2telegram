@@ -5,7 +5,13 @@ mqtt:
 telegram:
   chat_id: _REPLACE_ # your telegram chat id
   api_token: _REPLACE_ # your telegram bot api token
+  max_snapshot_size_mb: 10 # this is telegram limits https://core.telegram.org/bots/api#sendphoto
+  max_clip_size_mb: 50 # this is telegram limits https://core.telegram.org/bots/api#sendvideo
 
 frigate:
   host: _REPLACE_ # frigate host/server like 192.168.1.4
-  port: 5001 # frigate host/server port
+  port: 5000 # frigate host/server port
+  cameras: # this is optional, if not provided then all notifications will be sent out, if any camera listed here then it will send notifications only for that zone!
+    porch: # name of the camera, this must match the frigate config camera name
+      zones: # list down all the zones below for this camera
+        - porch_zone_1 # name of the zone, this must match the frigate config zone name
