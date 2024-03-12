@@ -4,7 +4,7 @@ mqtt:
 
 telegram:
   chat_id: _REPLACE_ # your telegram chat id
-  thread: _REPLACE_  # (Optional) if you want/have enabled the ability to post messages under a specific Topic
+  thread:  # optional if you want/have enabled the ability to post messages under a specific topic otherwise leave blank
   api_token: _REPLACE_ # your telegram bot api token
   max_snapshot_size_mb: 10 # this is telegram limits https://core.telegram.org/bots/api#sendphoto
   max_clip_size_mb: 50 # this is telegram limits https://core.telegram.org/bots/api#sendvideo
