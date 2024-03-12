@@ -21,7 +21,6 @@ class telegram_helper:
             # telegram API: https://core.telegram.org/bots/api#sendmessage
             telegram_message_url = self.base_url + "/sendMessage"
             if message_data != "":
-                # data = {"chat_id": self.bot_chat_id, 'text': message_data}
                 data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, 'text': message_data}
                 resp = requests.post(telegram_message_url, data=data, timeout=30)
                 if resp.status_code == 200:
@@ -43,7 +42,6 @@ class telegram_helper:
             telegram_photo_url = self.base_url + "/sendPhoto"
             if status == 200 and photo_data != "":
                 files = {'photo': photo_data}
-                #data = {"chat_id": self.bot_chat_id, "caption": caption}
                 data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, "caption": caption}
                 resp = requests.post(telegram_photo_url, data=data, files=files, timeout=30)
                 if resp.status_code == 200:
@@ -67,7 +65,6 @@ class telegram_helper:
             telegram_video_url = self.base_url + "/sendVideo"
             if status == 200 and video_data != "":
                 files = {'video': video_data}
-                # data = {"chat_id": self.bot_chat_id, "caption": caption}
                 data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, "caption": caption}
                 resp = requests.post(telegram_video_url, data=data, files=files, timeout=30)
                 if resp.status_code == 200:
