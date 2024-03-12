@@ -8,6 +8,7 @@ class telegram_helper:
             self.logger = logger
             self.bot_token = self.config['telegram']['api_token']
             self.bot_chat_id = self.config['telegram']['chat_id']
+            self.bot_thread = self.config['telegram']['thread']
             self.max_snapshot_size_mb = int(self.config['telegram']['max_snapshot_size_mb'])
             self.max_clip_size_mb = int(self.config['telegram']['max_clip_size_mb'])
             self.base_url = "https://api.telegram.org/bot" + self.bot_token
@@ -20,7 +21,8 @@ class telegram_helper:
             # telegram API: https://core.telegram.org/bots/api#sendmessage
             telegram_message_url = self.base_url + "/sendMessage"
             if message_data != "":
-                data = {"chat_id": self.bot_chat_id, 'text': message_data}
+                # data = {"chat_id": self.bot_chat_id, 'text': message_data}
+                data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, 'text': message_data}
                 resp = requests.post(telegram_message_url, data=data, timeout=30)
                 if resp.status_code == 200:
                     self.logger.info("Sent message successfully")
@@ -41,7 +43,8 @@ class telegram_helper:
             telegram_photo_url = self.base_url + "/sendPhoto"
             if status == 200 and photo_data != "":
                 files = {'photo': photo_data}
-                data = {"chat_id": self.bot_chat_id, "caption": caption}
+                #data = {"chat_id": self.bot_chat_id, "caption": caption}
+                data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, "caption": caption}
                 resp = requests.post(telegram_photo_url, data=data, files=files, timeout=30)
                 if resp.status_code == 200:
                     self.logger.info("Sent snapshot successfully")
@@ -64,7 +67,8 @@ class telegram_helper:
             telegram_video_url = self.base_url + "/sendVideo"
             if status == 200 and video_data != "":
                 files = {'video': video_data}
-                data = {"chat_id": self.bot_chat_id, "caption": caption}
+                # data = {"chat_id": self.bot_chat_id, "caption": caption}
+                data = {"message_thread_id": self.bot_thread, "chat_id": self.bot_chat_id, "caption": caption}
                 resp = requests.post(telegram_video_url, data=data, files=files, timeout=30)
                 if resp.status_code == 200:
                     self.logger.info("Sent clip successfully")
