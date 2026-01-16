@@ -1,8 +1,10 @@
 # standard imports
 import json
+import time
 import logging
 import urllib.request
 from datetime import datetime, timedelta
+from threading import Thread
 
 # third party imports which needs installation
 import paho.mqtt.client as mqtt # pip install paho.mqtt
@@ -55,13 +57,12 @@ class frigate2telegram:
 
             frigate_url = self.getFrigateUrl(event_type, event_id)
             if frigate_url is not None:
-                status, data, data_size = self.readFrigateData(frigate_url)
                 if event_type in ["new", "update"]:
-                    caption = f"There is a {motion_object} at {camera_name} camera"
-                    self.telegram_helper.sendPhoto(status, caption, data, data_size)
+                    thread = Thread(target=self.threadReadSendNotification, args=(2, event_type, motion_object, camera_name, frigate_url))
+                    thread.start()
                 elif event_type == "end":
-                    caption = f"Video of {motion_object} at {camera_name} camera"
-                    self.telegram_helper.sendVideo(status, caption, data, data_size)
+                    thread = Thread(target=self.threadReadSendNotification, args=(10, event_type, motion_object, camera_name, frigate_url))
+                    thread.start()
         except Exception as ex:
             self.logger.error(f"Exception onMqttMessage: {ex}")
 
@@ -119,16 +120,21 @@ class frigate2telegram:
         try:
             camera_list = self.config["frigate"].get("cameras")
             if camera_list is None:
+                self.logger.debug(f"hasMotionInRequiredZones: camera: {camera_name} is not configured with zones, will notify for all zones")
                 return True
             camera_details = camera_list.get(camera_name)
             if camera_details is None:
+                self.logger.debug(f"hasMotionInRequiredZones: camera: {camera_name} has no details, will notify for all zones")
                 return True
             zone_list = camera_details.get("zones")
             if zone_list is None:
+                self.logger.debug(f"hasMotionInRequiredZones: camera: {camera_name} has no zones, will notify for all zones")
                 return True
             for each_zone in zone_list:
                 if each_zone in entered_zones:
+                    self.logger.debug(f"hasMotionInRequiredZones: camera: {camera_name} has motion in zone: {each_zone}, will notify")
                     return True
+            self.logger.debug(f"hasMotionInRequiredZones: camera: {camera_name} has no motion in required zones and will not notify")
         except Exception as ex:
             self.logger.error(f"Exception hasMotionInRequiredZones: {ex}")
         return False
@@ -160,6 +166,21 @@ class frigate2telegram:
         data_size = round(data_size/(1024.0**2), 2)
         self.logger.info(f"Snapshot/clip size: {data_size} MB for url: {url}")
         return status, data, data_size
+
+    def threadReadSendNotification(self, sleep_time, event_type, motion_object, camera_name, frigate_url):
+        try:
+            self.logger.info(f"threadReadSendNotification: enter: {sleep_time} seconds sleep time, frigate_url: {frigate_url}")
+            time.sleep(sleep_time)
+            status, data, data_size = self.readFrigateData(frigate_url)
+            if event_type in ["new", "update"]:
+                caption = f"There is a {motion_object} at {camera_name} camera"
+                self.telegram_helper.sendPhoto(status, caption, data, data_size)
+            elif event_type == "end":
+                caption = f"Video of {motion_object} at {camera_name} camera"
+                self.telegram_helper.sendVideo(status, caption, data, data_size)
+            self.logger.info("threadReadSendNotification(): exit, sent delayed notification")
+        except Exception as ex:
+            self.logger.error(f"Exception threadReadSendNotification: {ex}")
 
     def loadConfig(self):
         try:
